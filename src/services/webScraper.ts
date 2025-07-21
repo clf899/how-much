@@ -129,31 +129,69 @@ class WebScraper {
       await page.setUserAgent(this.config.userAgent)
       await page.setViewport({ width: 1920, height: 1080 })
 
-      // Navigate to HomeAdvisor
+      // Navigate to HomeAdvisor cost guide
       const searchUrl = `https://www.homeadvisor.com/cost/${encodeURIComponent(service)}/`
       await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: this.config.timeout })
+
+      // Wait for content to load
+      await page.waitForSelector('body', { timeout: 10000 }).catch(() => {})
 
       const content = await page.content()
       const $ = cheerio.load(content)
 
       const prices: PriceData[] = []
-      const priceElements = $('.cost-range, .price, [class*="cost"], [class*="price"]')
+      
+      // Extract pricing from various HomeAdvisor elements
+      const priceSelectors = [
+        '.cost-range',
+        '.price',
+        '[class*="cost"]',
+        '[class*="price"]',
+        '.project-cost',
+        '.service-cost',
+        '.average-cost',
+        '.cost-estimate',
+        '.price-range',
+        '.cost-guide-price'
+      ]
 
-      priceElements.each((index, element) => {
-        const priceText = $(element).text().trim()
-        const price = this.extractPrice(priceText)
-        
-        if (price > 0) {
-          prices.push({
-            id: `homeadvisor_${service}_${index}`,
-            serviceId: service,
-            location: this.parseLocation(location),
-            price,
-            date: new Date().toISOString().split('T')[0],
-            description: `${service} service from HomeAdvisor`
-          })
-        }
+      priceSelectors.forEach(selector => {
+        $(selector).each((index, element) => {
+          const priceText = $(element).text().trim()
+          const price = this.extractPrice(priceText)
+          
+          if (price > 0) {
+            prices.push({
+              id: `homeadvisor_${service}_${index}`,
+              serviceId: service,
+              location: this.parseLocation(location),
+              price,
+              date: new Date().toISOString().split('T')[0],
+              description: `${service} service from HomeAdvisor`
+            })
+          }
+        })
       })
+
+      // Also look for specific HomeAdvisor pricing patterns
+      const textContent = $('body').text()
+      const priceMatches = textContent.match(/\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g)
+      
+      if (priceMatches) {
+        priceMatches.forEach((match, index) => {
+          const price = parseFloat(match.replace(/[$,]/g, ''))
+          if (price > 0 && price < 10000) { // Reasonable price range
+            prices.push({
+              id: `homeadvisor_text_${service}_${index}`,
+              serviceId: service,
+              location: this.parseLocation(location),
+              price,
+              date: new Date().toISOString().split('T')[0],
+              description: `${service} service from HomeAdvisor (text extraction)`
+            })
+          }
+        })
+      }
 
       await page.close()
 

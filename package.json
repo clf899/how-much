@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "test:scraper": "node test-scraper.js"
+    "test:scraper": "node test-scraper.js",
+    "test:homeadvisor": "node test-homeadvisor.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.5",
