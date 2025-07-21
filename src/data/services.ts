@@ -50,7 +50,7 @@ export const services: Service[] = [
     id: 'plumbing',
     name: 'Plumbing',
     category: 'maintenance',
-    icon: '🔧',
+    icon: '🚰',
     description: 'Plumbing repair and installation services',
     nationalAverage: 300,
     priceRange: { min: 200, max: 500 }
